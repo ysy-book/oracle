@@ -1,4 +1,3 @@
 # Summary
 
-* [Introduction](README.md)
-
+* [体系架构](README.md)
