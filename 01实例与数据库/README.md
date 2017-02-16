@@ -92,3 +92,85 @@
 ### server process
 服务器端的进程，user process 不能直接访问Oracle，必须通过相应的 server process 访问实例，进而访问数据库。
 `$ps -ef | grep LOCAL`
+在linux下看到的server process，（LOCAL=YES）是本地连接，（LOCAL=NO）是远程连接。
+可以在oracle查看V$process视图，它包括了当前所有的后台进程和服务器进程。
+SQL>select pid, program, background from v$process;
+background 字段为 1 是 background process，其余都是 server process
+
+### background process
+基本的后台进程有
+* smon：系统监控进程
+  * 当实例崩溃之后，Oracle会自动恢复实例。
+  * 释放不再使用的临时段。
+* pmon：进程监控
+  * 当 user process 失败时，清理出现故障的进程。释放所有当前挂起的锁定。释放服务器端使用的资源
+  * 监控空闲会话是否到达阀值
+  * 动态注册监听
+* dbwn：数据写入进程
+![dbwn](resources/dbwn.png)
+  * 将变更的数据缓冲区的脏buffer写入数据文件中。
+  * 释放数据缓冲区空间
+  * 触发条件：
+    * ckpt发出
+    * 脏块太多时（阈值）
+    * db_buffer自由空间不够时
+    * 3秒
+    * 表空间 read only/offline/backup 模式等
+    以上5 个状况之一发生时，dbwn 都会被触发
+* lgwr：写日志条目
+![lgwr](resources/lgwr.png)
+  * 将日志缓冲区中的日志条目写入日志文件。
+  * 不像DBWR可以有多个进程并行工作，LGWR只有一个进程
+  * 触发条件：
+    * commit
+    * 三分之一满（或1M满）
+    * 先于dbwr写（先记后写，必须在dbwr写脏块之前写入日志，保证未提交数据都能回滚）
+    * 3秒（因为有3，则由DBWR的3秒传导而来）
+    以上4个状况之一发生时，lgwr都会记日志
+* ckpt：生成检查点
+![ckpt](resources/ckpt.png)
+作用：通知或督促dbwr写脏块
+  * 完全检查点：保证数据库的一致性。
+  * 增量检查点：不断更新控制文件中的检查点位置，当发生实例崩溃时，可以尽量缩短实例恢复的时间。
+  * 局部检查点：特定的操作下，针对某个表空间的
+* arcn：归档当前日志
+归档模式下，发生日志切换时，把当前日志组中的内容写入归档日志，作为备份历史日志提供数据库的recovrey
+
+## PGA 的基本组件
+### 程序全局区（Program Global Area）的作用
+* 缓存来自服务器进程和后台进程的数据和控制信息。
+* 提供排序、hash 连接
+* 不提供 session 之间的共享
+* PGA 在进程创建时被分配，进程终止时被释放。所有进程的 PGA 之和构成了 PGA 的大小。
+PGA 的管理是比较复杂的，10g后，Oracle 推荐使用PGA 自动管理，屏蔽了 PGA 的复杂性。
+
+### PGA 的结构
+![pga](resources/pga.png)
+* SQL 工作区（SQL Work Area）：有几个子区
+  * Sort Area
+  * Harh Area
+  * Bitmap Merge Area
+作用：排序操作（order by/group by/distinct/union等），多表hash连接，位图连接，创建位图
+* 会话空间（Session Memory）
+作用：存放logon信息等会话相关的控制信息
+* 私有SQL区域（Private SQL Area）
+作用：存储 server process 执行SQL所需要的私有数据和控制结构，如绑定变量，它包括固定区域和运行时区域
+* 游标区域（Cursor Area）：PLSQL 游标使用的就是这块区域
+
+
+## 连接方式
+![middleTier](resources/middleTier.png)
+### 专用连接模式（dedicated）
+对于客户端的每个 user process，服务器端都会出现一个 server process，会话与专用服务器之间存在一对一的映射（一根绳上的两个蚂蚱）。
+专用连接的 PGA 的管理方式是私有的。Oracle缺省采用专用连接模式。
+![pga-dedicated](resources/pga-dedicated.png)
+
+### 共享连接模式（shared）
+![pga-shared](resources/pga-shared.png)
+多个user process 共享一个 server process。
+* 共享服务器实际上就是一种连接池机制（connectionpooling），连接池可以重用已有的超时连接，服务于其它活动会话，但容易产生锁等待。此种连接方式现在已经很少见了（具体配置方法见第十五章Oracle网络）。
+* 所有调度进程（dispatcher）共享一个公共的请求队列（request queue），但是每个调度进程都有与自己响应的队列（response queue）。
+* 在共享服务器中会话的（UGA）存储信息是在 SGA 中的，而不像专用连接那样在 PGA 中存储信息，这时的 PGA 的存储结构为堆栈空间。
+
+### 驻留连接池模式（database resident connection pooling，简称 DRCP）：
+适用于必须维持数据库的永久连接。结合了专有服务器模式和共享服务器模式的特点。它使用连接代理（而不是专有服务器）连接客户机到数据库，优点是可以用很少的内存处理大量并发连接（11g新特性，特别适用于 Apache 的 PHP 应用环境）。
