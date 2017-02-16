@@ -44,22 +44,21 @@
 * Buffer pool=(default pool)+(nodefault pool)
 ![databaseBufferCache](resources/databaseBufferCache.png)
 
-  * default pool（参数db_cache_size）是标准块存放的内存空间大小，SGA自动管理时此参数不用设置。使用LRU算法清理空间
-  * nodefault pool：对应的参数有
-    * db_nk_cache_size   指定非标准块大小内存空间，比如2k、4k、16k、32k。
-    * db_keep_cache_size   存放经常访问的小表或索引等。
-    * db_recycle_cache_size   与keep相反，存放偶尔做全表扫描的大表的数据。
-  * 如何指定使用某个表调入nodefault pool
-SQL> alter table scott.emp1 storage(buffer_pool keep);
-SQL>
-select segment_name,buffer_pool from dba_segments where segment_name='EMP1';
-  * default pool对应的参数是db_cache_size与标准块default block是配套的，如果default block是8k, db_cache_size这个参数将代替db_8k_cache_size。
-  * 如果要建立非标准块的表空间，先前要设定db buffer中的与之对应的db_nk_cache_size参数。
-第一步，先指定db buffer里的16k cache空间大小。
-SQL> alter system set db_16k_cache_size=8m;
-第二步，建立非标准块表空间
-SQL> create tablespace tbs_16k datafile '/u01/oradata/prod/tbs16k01.dbf' size 10m blocksize 16k;
-SQL> select TABLESPACE_NAME,block_size from dba_tablespaces;
+* default pool（参数db_cache_size）是标准块存放的内存空间大小，SGA自动管理时此参数不用设置。使用LRU算法清理空间
+* nodefault pool：对应的参数有
+  * db_nk_cache_size   指定非标准块大小内存空间，比如2k、4k、16k、32k。
+  * db_keep_cache_size   存放经常访问的小表或索引等。
+  * db_recycle_cache_size   与keep相反，存放偶尔做全表扫描的大表的数据。
+* 如何指定使用某个表调入nodefault pool
+  SQL> alter table scott.emp1 storage(buffer_pool keep);
+  SQL>select segment_name,buffer_pool from dba_segments where segment_name='EMP1';
+* default pool对应的参数是db_cache_size与标准块default block是配套的，如果default block是8k, db_cache_size这个参数将代替db_8k_cache_size。
+* 如果要建立非标准块的表空间，先前要设定db buffer中的与之对应的db_nk_cache_size参数。
+  第一步，先指定db buffer里的16k cache空间大小。
+    SQL> alter system set db_16k_cache_size=8m;
+  第二步，建立非标准块表空间
+    SQL> create tablespace tbs_16k datafile '/u01/oradata/prod/tbs16k01.dbf' size 10m blocksize 16k;
+    SQL> select TABLESPACE_NAME,block_size from dba_tablespaces;
 
 ### redo log buffer
 日志条目（redo entries）记录了数据库的所有修改信息(包括DML和DDL），目的是为数据库恢复，日志条目首先产生于日志缓冲区，日志缓冲区较小，一般缺省值在3M-15M之间，它是以字节为单位的。
@@ -74,3 +73,22 @@ SQL> select TABLESPACE_NAME,block_size from dba_tablespaces;
 
 ### stream pool（可选）
 为了stream process而分配的内存空间。stream技术是为了在不同数据库之间共享数据，因此，它只对使用了stream数据库特性的系统是重要的。
+
+
+## Oracle 的进程
+### user process
+客户端的 process，访问数据库分为三种形式：1 sql*plus；2 应用程序；3 web方式（EM）
+* sql*plus 可以执行sql和plsql请求，是典型的客户端进程。
+  * linux 作为客户端：可以使用ps看到sqlplus关键字：
+  `$ ps -ef | grep sqlplus`
+  * windows 作为客户端：可以通过查询任务管理器看到sqlplus用户进程
+  `sqlplus sys/system@ as sysdba`
+* 应用程序
+  例如：通过java程序直接嵌套sql语句，或调用Oracle存储过程。
+* web方式
+  例如：通过OEM登陆、管理数据库
+  `$emctl start dbconsole`
+
+### server process
+服务器端的进程，user process 不能直接访问Oracle，必须通过相应的 server process 访问实例，进而访问数据库。
+`$ps -ef | grep LOCAL`
