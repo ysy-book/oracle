@@ -13,6 +13,7 @@
 * 以组的方式管理 redo file，最少两组 redo，循环使用
 * 和数据文件放到不同的磁盘上，需读写速度快的磁盘（比如采用 RAID10）
 * 日志的 block 和数据文件的 block 不是一回事
+
 ```
 SQL>select max(lebsz) from x$kccle;
 MAX(LEBSZ)
@@ -81,6 +82,7 @@ SQL> select * from v$logfile;
 
 为每个组添加一个 member （一共是 4 个组）
 先建好目录，准备放在/home/oracle/oradata/orcl
+
 ```
 $mkdir -p /home/oracle/oradata/orcl
 
@@ -109,6 +111,7 @@ SQL> select * from v$logfile;
 
 SQL>
 ```
+
 STATUS 是 INVALID，说明 member 还没有同步好
 
 ```
