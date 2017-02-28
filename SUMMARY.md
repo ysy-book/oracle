@@ -4,3 +4,4 @@
  * [实例与数据库](document/01实例与数据库.md)
  * [实例管理及数据库的启动/关闭](document/02实例管理及数据库的启动或关闭.md)
  * [控制文件](document/03控制文件.md)
+ * [redo日志](document/04redo日志.md)
