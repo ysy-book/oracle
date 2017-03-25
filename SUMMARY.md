@@ -5,3 +5,5 @@
  * [实例管理及数据库的启动/关闭](document/02实例管理及数据库的启动或关闭.md)
  * [控制文件](document/03控制文件.md)
  * [redo日志](document/04redo日志.md)
+ * [归档日志](document/05归档日志.md)
+ * [日志挖掘](document/06日志挖掘.md)
