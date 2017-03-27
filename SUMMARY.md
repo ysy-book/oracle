@@ -8,3 +8,4 @@
  * [归档日志](document/05归档日志.md)
  * [日志挖掘](document/06日志挖掘.md)
  * [管理 undo](document/07管理undo.md)
+ * [检查点](document/08检查点.md)
