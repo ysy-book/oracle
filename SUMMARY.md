@@ -9,3 +9,4 @@
  * [日志挖掘](document/06日志挖掘.md)
  * [管理 undo](document/07管理undo.md)
  * [检查点](document/08检查点.md)
+ * [实例恢复机制](document/09实例恢复机制.md)
