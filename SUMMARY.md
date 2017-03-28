@@ -10,3 +10,4 @@
  * [管理 undo](document/07管理undo.md)
  * [检查点](document/08检查点.md)
  * [实例恢复机制](document/09实例恢复机制.md)
+ * [手工创建数据库](document/10手工创建数据库.md)
